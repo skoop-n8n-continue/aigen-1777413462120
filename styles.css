@@ -23,8 +23,8 @@ body {
 #hello-text {
     font-size: 8rem;
     font-weight: 900;
-    color: #3b82f6; /* Blue */
-    text-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+    color: #22c55e; /* Green */
+    text-shadow: 0 0 20px rgba(34, 197, 94, 0.4);
     animation: pulse 2s infinite ease-in-out;
 }
 
