@@ -24,11 +24,14 @@
  *   data-bind-hide="app_settings.compact_mode"       → hidden attribute when true
  *   data-bind-class="app_settings.nav_style"         → adds class "<lastKey>-<value>"
  *   data-bind-attr="aria-label:storefront.store_name" → arbitrary attr (key:path[, key:path])
+ *   data-bind-style="--brand-color:brands.0.accent"   → CSS prop or --custom-prop (key:path[, key:path])
  *
  * Color fields (type: "color") on non-collection sections also auto-populate
  * CSS custom properties on :root, named "--<field_key_kebab_case>". This means
  * any color in data.json becomes available in CSS as var(--field-key) without
- * requiring an explicit binding.
+ * requiring an explicit binding. Per-collection-item CSS variables (a brand's
+ * accent color, a category's tint) need data-bind-style to live-update because
+ * :root variables can't represent per-item values.
  */
 
 (function () {
@@ -243,6 +246,34 @@
         if (typeof attrVal !== 'undefined' && attrVal !== null) {
           elF.setAttribute(attrName, String(attrVal));
         }
+      }
+    }
+
+    // Inline styles (incl. CSS custom properties) — "prop:path, prop:path"
+    // The most common need is per-element CSS variables for theming, e.g.
+    // <div data-bind-style="--brand-color:brands.N.accent_color">. The
+    // runtime uses element.style.setProperty which works for both standard
+    // CSS properties (color, padding, border-radius, ...) and custom
+    // properties (--anything). This is what makes per-card brand theming
+    // live-update — without it, top-level :root variables update but per-
+    // item ones do not, because :root can only hold a single value per name.
+    nodeList = document.querySelectorAll('[data-bind-style]');
+    for (var iG = 0; iG < nodeList.length; iG++) {
+      var elG = nodeList[iG];
+      var styleSpec = elG.getAttribute('data-bind-style') || '';
+      var stylePairs = styleSpec.split(',');
+      for (var iGp = 0; iGp < stylePairs.length; iGp++) {
+        var sPair = stylePairs[iGp].trim();
+        if (!sPair) continue;
+        var sColon = sPair.indexOf(':');
+        if (sColon < 0) continue;
+        var propName = sPair.slice(0, sColon).trim();
+        var propPath = sPair.slice(sColon + 1).trim();
+        var propVal = readPath(sections, propPath);
+        if (typeof propVal === 'undefined' || propVal === null) continue;
+        try {
+          elG.style.setProperty(propName, String(propVal));
+        } catch (_) { /* invalid property names silently ignored */ }
       }
     }
   }
